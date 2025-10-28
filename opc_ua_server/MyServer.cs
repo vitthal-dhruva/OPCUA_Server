@@ -48,8 +48,6 @@ namespace OpcUaServer
                 //Console.WriteLine($"TransportProfile: {endpoint.TransportProfileUri}");
                 Console.WriteLine("--------------------------------------------");
             }
-
-            Console.WriteLine("Server is ready for LAN connections.");
         }
     }
 }

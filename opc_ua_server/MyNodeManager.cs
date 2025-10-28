@@ -45,56 +45,13 @@ public class MyNodeManager : CustomNodeManager2
 
         AddPredefinedNode(SystemContext, _deviceFolder);
 
-        // Add a counter variable
-        var counterNode = new BaseDataVariableState(_deviceFolder)
-        {
-            SymbolicName = "Counter",
-            NodeId = new NodeId("Counter", NamespaceIndex),
-            BrowseName = new QualifiedName("Counter", NamespaceIndex),
-            DisplayName = new LocalizedText("en-US", "Counter"),
-            TypeDefinitionId = VariableTypeIds.BaseDataVariableType,
-            DataType = DataTypeIds.UInt32,
-            ValueRank = ValueRanks.Scalar,
-            AccessLevel = AccessLevels.CurrentReadOrWrite,
-            UserAccessLevel = AccessLevels.CurrentReadOrWrite,
-            Value = _counter
-        };
-        counterNode.OnReadValue = OnReadCounter;
-        _deviceFolder.AddChild(counterNode);
-        AddPredefinedNode(SystemContext, counterNode);
-
-        // Timer to update counter every second
-        _timer = new Timer(OnUpdateCounter, counterNode, 1000, 1000);
+        
     }
 
-    private ServiceResult OnReadCounter(
-        ISystemContext context,
-        NodeState node,
-        NumericRange indexRange,
-        QualifiedName dataEncoding,
-        ref object value,
-        ref StatusCode statusCode,
-        ref DateTime timestamp)
-    {
-        value = _counter;
-        statusCode = StatusCodes.Good;
-        timestamp = DateTime.UtcNow;
-        return ServiceResult.Good;
-    }
-
-    private void OnUpdateCounter(object state)
-    {
-        _counter++;
-        if (state is BaseDataVariableState variable)
-        {
-            variable.Value = _counter;
-            variable.Timestamp = DateTime.UtcNow;
-            variable.ClearChangeMasks(SystemContext, false);
-        }
-    }
+   
 
     // Add dynamic node under Device folder
-    public BaseDataVariableState AddDynamicNode(string name, double initialValue)
+    public BaseDataVariableState AddDynamicNode(string name, object initialValue, NodeId dataType)
     {
         var variable = new BaseDataVariableState(_deviceFolder)
         {
@@ -103,7 +60,7 @@ public class MyNodeManager : CustomNodeManager2
             BrowseName = new QualifiedName(name, NamespaceIndex),
             DisplayName = new LocalizedText("en-US", name),
             TypeDefinitionId = VariableTypeIds.BaseDataVariableType,
-            DataType = DataTypeIds.Double,
+            DataType = dataType,
             ValueRank = ValueRanks.Scalar,
             AccessLevel = AccessLevels.CurrentReadOrWrite,
             UserAccessLevel = AccessLevels.CurrentReadOrWrite,

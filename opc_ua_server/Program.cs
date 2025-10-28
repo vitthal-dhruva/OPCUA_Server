@@ -3,6 +3,9 @@ using Opc.Ua;
 using Opc.Ua.Configuration;
 using Opc.Ua.Server;
 using System;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace OpcUaServer
@@ -24,7 +27,17 @@ namespace OpcUaServer
 
             // Configure and build the server
             await application.LoadApplicationConfigurationAsync(false);
-            bool haveCert = await application.CheckApplicationInstanceCertificatesAsync(true, 2048);
+            // Get LAN IP
+            string lanIp = GetLocalIPv4();
+
+            // Set BaseAddresses dynamically
+            application.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Clear();
+            application.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Add($"opc.tcp://{lanIp}:4840");
+
+            // Optional: print endpoint
+            Console.WriteLine("Server will run on: " + application.ApplicationConfiguration.ServerConfiguration.BaseAddresses[0]);
+            DeleteOpcUaCertificates(); // remove old invalid certs
+            bool haveCert = await application.CheckApplicationInstanceCertificatesAsync(false, 2048);
             if (!haveCert)
             {
                 throw new Exception("Could not create a valid certificate.");
@@ -38,9 +51,7 @@ namespace OpcUaServer
 
 
             // Start the server
-            await application.StartAsync(server);
-
-            Console.WriteLine("Server started. Press enter to exit.");
+            await application.StartAsync(server);            
             var masterNodeManager = server.CurrentInstance.NodeManager as MasterNodeManager;
             if (masterNodeManager != null)
             {
@@ -51,9 +62,10 @@ namespace OpcUaServer
 
                 if (_myNodeManager != null)
                 {
-                    _myNodeManager.AddDynamicNode("Temperature", 25.5);
-                    _myNodeManager.AddDynamicNode("Pressure", 25);
-                    _myNodeManager.AddDynamicNode("watervalue", 9);
+                    _myNodeManager.AddDynamicNode("Temperature", 25.5, DataTypeIds.Double);
+                    _myNodeManager.AddDynamicNode("Pressure", 25,DataTypeIds.Int32);
+                    _myNodeManager.AddDynamicNode("watervalue", 9, DataTypeIds.Int64);
+                    _myNodeManager.AddDynamicNode("StringValue", "DACPL OPC Server", DataTypeIds.String);
                     _timer = new Timer(UpdateNodes, null, 1000, 1000);
                 }
                 else
@@ -82,6 +94,66 @@ namespace OpcUaServer
             _myNodeManager.UpdateNodeValue("watervalue", water);
 
             Console.WriteLine($"Updated nodes: Temperature={temp}, Pressure={pressure}, WaterValue={water}");
+        }
+        public static string GetLocalIPv4()
+        {
+            foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (ni.OperationalStatus != OperationalStatus.Up)
+                    continue;
+
+                // Skip loopback, tunnel, and virtual adapters
+                if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback ||
+                    ni.NetworkInterfaceType == NetworkInterfaceType.Tunnel)
+                    continue;
+
+                var ipProps = ni.GetIPProperties();
+                foreach (var ip in ipProps.UnicastAddresses)
+                {
+                    if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        // Ignore APIPA addresses (169.x.x.x)
+                        if (!ip.Address.ToString().StartsWith("169."))
+                            return ip.Address.ToString();
+                    }
+                }
+            }
+
+            return "127.0.0.1"; // fallback
+        }
+        public static void DeleteOpcUaCertificates()
+        {
+            // Get the local application data folder
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            // Build the OPC UA PKI "own" folder path
+            string pkiOwnFolder = Path.Combine(localAppData, "OPC Foundation", "pki", "own");
+
+            if (Directory.Exists(pkiOwnFolder))
+            {
+                Console.WriteLine("Deleting old OPC UA certificates...");
+                try
+                {
+                    DirectoryInfo di = new DirectoryInfo(pkiOwnFolder);
+                    foreach (FileInfo file in di.GetFiles())
+                    {
+                        file.Delete();
+                    }
+                    foreach (DirectoryInfo dir in di.GetDirectories())
+                    {
+                        dir.Delete(true);
+                    }
+                    Console.WriteLine("Old certificates deleted.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error deleting certificates: " + ex.Message);
+                }
+            }
+            else
+            {
+                Console.WriteLine("No existing certificates found.");
+            }
         }
     }
 }

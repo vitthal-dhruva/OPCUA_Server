@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ApplicationConfiguration
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:ua="http://opcfoundation.org/UA/2008/02/Types.xsd"
+  xmlns="http://opcfoundation.org/UA/SDK/Configuration.xsd">
+
+	<ApplicationName>Quickstart Reference Server</ApplicationName>
+	<ApplicationUri>urn:localhost:UA:Quickstarts:ReferenceServer</ApplicationUri>
+	<ProductUri>uri:opcfoundation.org:Quickstarts:ReferenceServer</ProductUri>
+	<ApplicationType>Server_0</ApplicationType>
+
+	<SecurityConfiguration>
+		<ApplicationCertificates>
+			<CertificateIdentifier>
+				<StoreType>Directory</StoreType>
+				<StorePath>%LocalApplicationData%/OPC Foundation/pki/own</StorePath>
+				<SubjectName>CN=Quickstart Reference Server, C=US, S=Arizona, O=OPC Foundation, DC=localhost</SubjectName>
+				<CertificateTypeString>RsaSha256</CertificateTypeString>
+			</CertificateIdentifier>
+		</ApplicationCertificates>
+
+		<TrustedIssuerCertificates>
+			<StoreType>Directory</StoreType>
+			<StorePath>%LocalApplicationData%/OPC Foundation/pki/issuer</StorePath>
+		</TrustedIssuerCertificates>
+
+		<TrustedPeerCertificates>
+			<StoreType>Directory</StoreType>
+			<StorePath>%LocalApplicationData%/OPC Foundation/pki/trusted</StorePath>
+		</TrustedPeerCertificates>
+
+		<RejectedCertificateStore>
+			<StoreType>Directory</StoreType>
+			<StorePath>%LocalApplicationData%/OPC Foundation/pki/rejected</StorePath>
+		</RejectedCertificateStore>
+
+		<MaxRejectedCertificates>5</MaxRejectedCertificates>
+		<AutoAcceptUntrustedCertificates>true</AutoAcceptUntrustedCertificates>
+		<RejectSHA1SignedCertificates>true</RejectSHA1SignedCertificates>
+		<RejectUnknownRevocationStatus>true</RejectUnknownRevocationStatus>
+		<MinimumCertificateKeySize>2048</MinimumCertificateKeySize>
+		<SendCertificateChain>true</SendCertificateChain>
+	</SecurityConfiguration>
+
+	<TransportQuotas>
+		<OperationTimeout>120000</OperationTimeout>
+		<MaxStringLength>1048576</MaxStringLength>
+		<MaxByteStringLength>1048576</MaxByteStringLength>
+		<MaxArrayLength>65535</MaxArrayLength>
+		<MaxMessageSize>4194304</MaxMessageSize>
+		<MaxBufferSize>65535</MaxBufferSize>
+		<ChannelLifetime>30000</ChannelLifetime>
+		<SecurityTokenLifetime>3600000</SecurityTokenLifetime>
+	</TransportQuotas>
+
+	<ServerConfiguration>
+		<!-- Simple single TCP endpoint -->
+		<BaseAddresses>
+			<ua:String>opc.tcp://192.168.1.63:4840/MyFirstServer</ua:String>
+		</BaseAddresses>
+
+		<SecurityPolicies>
+			<ServerSecurityPolicy>
+				<SecurityMode>None_1</SecurityMode>
+				<SecurityPolicyUri>http://opcfoundation.org/UA/SecurityPolicy#None</SecurityPolicyUri>
+			</ServerSecurityPolicy>
+		</SecurityPolicies>
+
+		<UserTokenPolicies>
+			<ua:UserTokenPolicy>
+				<ua:TokenType>Anonymous_0</ua:TokenType>
+			</ua:UserTokenPolicy>
+		</UserTokenPolicies>
+
+		<DiagnosticsEnabled>true</DiagnosticsEnabled>
+		<NodeManagerSaveFile>Quickstarts.ReferenceServer.nodes.xml</NodeManagerSaveFile>
+	</ServerConfiguration>
+
+	<TraceConfiguration>
+		<OutputFilePath>%LocalApplicationData%/OPC Foundation/Logs/Quickstarts.ReferenceServer.log.txt</OutputFilePath>
+		<DeleteOnLoad>true</DeleteOnLoad>
+		<TraceMasks>519</TraceMasks>
+	</TraceConfiguration>
+</ApplicationConfiguration>

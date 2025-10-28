@@ -1,22 +1,4 @@
-﻿//// MyServer.cs
-//using Opc.Ua;
-//using Opc.Ua.Server;
-//using System.Collections.Generic;
-
-//namespace OpcUaServer
-//{
-//    public class MyServer : StandardServer
-//    {
-//        protected override MasterNodeManager CreateMasterNodeManager(IServerInternal server, ApplicationConfiguration configuration)
-//        {
-//            var nodeManagers = new List<INodeManager>();
-//            nodeManagers.Add(new MyNodeManager(server, configuration));
-
-//            return new MasterNodeManager(server, configuration, null, nodeManagers.ToArray());
-//        }
-//    }
-//}
-// In your MyServer class constructor or initialization
+﻿
 // MyServer.cs
 using Opc.Ua;
 using Opc.Ua.Server;

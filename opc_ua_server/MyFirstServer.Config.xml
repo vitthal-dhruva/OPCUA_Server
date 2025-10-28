@@ -56,7 +56,9 @@
 	<ServerConfiguration>
 		<!-- Simple single TCP endpoint -->
 		<BaseAddresses>
-			<ua:String>opc.tcp://192.168.1.63:4840/MyFirstServer</ua:String>
+			<!--This Part is Changed-->
+			<ua:String>opc.tcp://0.0.0.0:4840/MyFirstServer</ua:String> <!--for local-->
+			<!--<ua:String>opc.tcp://192.168.1.63:4840/MyFirstServer</ua:String>--><!-- For Access in lan-->
 		</BaseAddresses>
 
 		<SecurityPolicies>

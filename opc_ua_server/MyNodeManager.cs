@@ -7,8 +7,8 @@ public class MyNodeManager : CustomNodeManager2
 {
     private const string MyNamespaceUri = "http://MyFirstServer/custom/";
     private FolderState _deviceFolder;
-    private Timer _timer;
-    private uint _counter;
+ 
+    private readonly Dictionary<string, BaseDataVariableState> _nodeCache = new();
 
     public MyNodeManager(IServerInternal server, ApplicationConfiguration configuration)
         : base(server, configuration, new string[] { MyNamespaceUri })
@@ -48,15 +48,22 @@ public class MyNodeManager : CustomNodeManager2
         
     }
 
-   
-
-    // Add dynamic node under Device folder
+    /// <summary>
+    /// Adds a dynamic variable node under the device folder and stores it in cache.
+    /// </summary>
     public BaseDataVariableState AddDynamicNode(string name, object initialValue, NodeId dataType)
     {
+        if (_deviceFolder == null)
+        {
+            Console.WriteLine("[!] Device folder not initialized, cannot add node.");
+            return null;
+        }
+
+        // Create new variable node
         var variable = new BaseDataVariableState(_deviceFolder)
         {
             SymbolicName = name,
-            NodeId = new NodeId(Guid.NewGuid(), NamespaceIndex), // Unique NodeId
+            NodeId = new NodeId(name, NamespaceIndex), // Must be unique
             BrowseName = new QualifiedName(name, NamespaceIndex),
             DisplayName = new LocalizedText("en-US", name),
             TypeDefinitionId = VariableTypeIds.BaseDataVariableType,
@@ -69,42 +76,126 @@ public class MyNodeManager : CustomNodeManager2
             Timestamp = DateTime.UtcNow
         };
 
+        // Add to OPC folder and predefined list
         _deviceFolder.AddChild(variable);
         AddPredefinedNode(SystemContext, variable);
 
-        // Notify clients (like Matrikon)
+        // Add to cache for fast updates
+        _nodeCache[name] = variable;
+
+        // Notify clients (Matrikon, UAExpert, etc.)
         _deviceFolder.ClearChangeMasks(SystemContext, true);
 
-        Console.WriteLine($"[+] Dynamic node '{name}' added with NodeId {variable.NodeId}");
+        Console.WriteLine($"[+] Added dynamic node '{name}' (NodeId: {variable.NodeId})");
         return variable;
     }
 
-    // Update value of dynamic node
-    public void UpdateNodeValue(string name, double newValue)
+    /// <summary>
+    /// Updates a node value instantly using cache (no scanning).
+    /// </summary>
+    public Task UpdateNodeValue(string name, object newValue)
     {
-        var children = new List<BaseInstanceState>();
-        _deviceFolder.GetChildren(SystemContext, children);
+        if (_deviceFolder == null)
+            return Task.CompletedTask;
 
-        foreach (var child in children)
+        if (_nodeCache.TryGetValue(name, out var variable))
         {
-            if (child.DisplayName.Text == name && child is BaseDataVariableState variable)
-            {
-                variable.Value = newValue;
-                variable.Timestamp = DateTime.UtcNow;
-                variable.ClearChangeMasks(SystemContext, false);
-                Console.WriteLine($"Child: {child.DisplayName}, NodeId: {child.NodeId}");
+            variable.Value = newValue;
+            variable.Timestamp = DateTime.UtcNow;
+            variable.ClearChangeMasks(SystemContext, false);
 
-                Console.WriteLine($"[*] Updated node '{name}' to {newValue}");
-                return;
-            }
+            // Debug / log
+            Console.WriteLine($"[*] Updated node '{name}' → {newValue} @ {DateTime.UtcNow:HH:mm:ss.fff}");
+        }
+        else
+        {
+            Console.WriteLine($"[!] Node '{name}' not found in cache (maybe not created yet).");
         }
 
-        Console.WriteLine($"[!] Node '{name}' not found");
+        return Task.CompletedTask;
     }
+
+    // Add dynamic node under Device folder
+    //public BaseDataVariableState AddDynamicNode(string name, object initialValue, NodeId dataType)
+    //{
+    //    var variable = new BaseDataVariableState(_deviceFolder)
+    //    {
+    //        SymbolicName = name,
+    //        NodeId = new NodeId(name, NamespaceIndex), // Unique NodeId
+    //        BrowseName = new QualifiedName(name, NamespaceIndex),
+    //        DisplayName = new LocalizedText("en-US", name),
+    //        TypeDefinitionId = VariableTypeIds.BaseDataVariableType,
+    //        DataType = dataType,
+    //        ValueRank = ValueRanks.Scalar,
+    //        AccessLevel = AccessLevels.CurrentReadOrWrite,
+    //        UserAccessLevel = AccessLevels.CurrentReadOrWrite,
+    //        Value = initialValue,
+    //        StatusCode = StatusCodes.Good,
+    //        Timestamp = DateTime.UtcNow
+    //    };
+
+    //    _deviceFolder.AddChild(variable);
+    //    AddPredefinedNode(SystemContext, variable);
+
+    //    // Notify clients (like Matrikon)
+    //    _deviceFolder.ClearChangeMasks(SystemContext, true);
+
+    //    Console.WriteLine($"[+] Dynamic node '{name}' added with NodeId {variable.NodeId}");
+    //    return variable;
+    //}
+
+    // Update value of dynamic node
+    //public void UpdateNodeValue(string name, double newValue)
+    //{
+    //    var children = new List<BaseInstanceState>();
+    //    _deviceFolder.GetChildren(SystemContext, children);
+
+    //    foreach (var child in children)
+    //    {
+    //        if (child.DisplayName.Text == name && child is BaseDataVariableState variable)
+    //        {
+    //            variable.Value = newValue;
+    //            variable.Timestamp = DateTime.UtcNow;
+    //            variable.ClearChangeMasks(SystemContext, false);
+    //            Console.WriteLine($"Child: {child.DisplayName}, NodeId: {child.NodeId}");
+
+    //            Console.WriteLine($"[*] Updated node '{name}' to {newValue}");
+    //            return;
+    //        }
+    //    }
+
+    //    Console.WriteLine($"[!] Node '{name}' not found");
+    //}
+    //public  Task UpdateNodeValue(string name, object newValue)
+    //{
+    //    if (_deviceFolder == null) return Task.CompletedTask; ;
+
+    //      var children = new List<BaseInstanceState>();
+    //        _deviceFolder.GetChildren(SystemContext, children);
+
+    //        foreach (var child in children)
+    //        {
+    //            if (child.DisplayName.Text == name && child is BaseDataVariableState variable)
+    //            {
+    //                variable.Value = newValue;
+    //                variable.Timestamp = DateTime.UtcNow;
+    //                variable.ClearChangeMasks(SystemContext, false);
+
+    //                Console.WriteLine($"Child: {child.DisplayName}, NodeId: {child.NodeId}");
+    //                Console.WriteLine($"[*] Updated node '{name}' to {newValue}");
+    //                break;
+    //            }
+    //        }
+    //    Console.WriteLine($"[!] Node '{name}' not found");
+    //    return Task.CompletedTask;
+
+
+    //}
+
 }
 
 
 
-               
+
 
 
